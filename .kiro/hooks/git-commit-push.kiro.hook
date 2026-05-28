@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Git Commit & Push",
+  "description": "Analiza los cambios pendientes, actualiza el README.md con las features y modificaciones, genera un mensaje de commit descriptivo automáticamente, y hace add + commit + push a la rama actual.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Realizá las siguientes tareas en orden:\n\n1. Ejecutá `git diff HEAD` y `git status` para ver todos los cambios pendientes.\n\n2. Analizá los cambios y actualizá el archivo `README.md` para reflejar el estado actual del proyecto. Agregá o modificá las secciones necesarias para documentar las features nuevas o modificadas que encuentres en el diff. No elimines secciones existentes que sigan siendo válidas.\n\n3. Generá un mensaje de commit descriptivo en inglés que resuma los cambios. El formato debe ser:\n   - Primera línea: resumen corto (máx 70 caracteres), tipo conventional commits (feat/fix/refactor/docs/chore)\n   - Cuerpo (separado por línea en blanco): lista con bullet points de los cambios principales\n\n4. Ejecutá en orden:\n   - `git add .`\n   - `git commit -m \"<mensaje generado>\"`\n   - `git push`\n\n5. Reportá el resultado final indicando el hash del commit y la rama a la que se hizo push."
+  }
+}

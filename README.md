@@ -292,26 +292,59 @@ GET /board/{list_id}/tasks/{task_id}   → detalle de una tarea
 
 ```
 ch-clickup/
-├── main.py              # Código completo de la API (sin dependencias externas)
-├── build_lambda.ps1     # Script para generar lambda_package.zip
-├── lambda_package.zip   # ZIP listo para subir a Lambda (generado por el script)
-├── requirements.txt     # Sin dependencias (referencia)
+├── main.py                  # Código completo de la API (sin dependencias externas)
+├── build_lambda.ps1         # Script para generar lambda_package.zip
+├── deploy_frontend.ps1      # Script para subir el frontend a S3 e invalidar CloudFront
+├── lambda_package.zip       # ZIP listo para subir a Lambda (generado por el script)
+├── requirements.txt         # Sin dependencias (referencia)
+├── .env.deploy              # Credenciales AWS para deploy (no se commitea)
 ├── frontend/
-│   └── index.html       # Frontend estático para S3 + CloudFront
-└── README.md            # Este archivo
+│   └── index.html           # Frontend estático para S3 + CloudFront
+└── README.md                # Este archivo
 ```
 
 ---
 
 ## Frontend (S3 + CloudFront)
 
-Interfaz web estática que permite a los usuarios:
-- Ingresar su API Key de ClickUp y la URL de API Gateway
-- Cargar un tablero por List ID y ver todas sus tareas
+Interfaz web estática (Guri Data Team Board Manager) que permite a los usuarios:
+- Ingresar su API Key de ClickUp y cargar el tablero configurado
+- Ver todas las tareas con sus estados, asignados, tags y último comentario
+- Filtrar tareas por estado, asignado, tag y actividad del día desde un sidebar lateral
+- Ordenar la tabla por cualquier columna (nombre, estado, asignados, tags, fecha de comentario)
+- Ver el texto completo de un comentario en un popover flotante al hacer click
 - Agregar comentarios a tareas individuales
-- Descargar el CSV de tareas (con opciones de comentarios y filtrado)
+- Descargar el CSV de tareas
+- Cambiar entre modo oscuro y modo claro (preferencia persistida en `localStorage`)
+- Usar el **modo demo** con token `testing12345678` para explorar la UI sin una API Key real
+
+### Modo demo
+
+Ingresá `testing12345678` como API Key para activar el modo demo. En este modo:
+- Los datos del tablero son ficticios (generados en el cliente)
+- Los comentarios no se envían a ClickUp
+- Se muestra un banner de aviso en la interfaz
 
 ### Deploy en S3 + CloudFront
+
+#### Opción A — Script automatizado (recomendado)
+
+Creá el archivo `.env.deploy` con tus credenciales AWS (nunca se commitea):
+
+```
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+Luego ejecutá:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy_frontend.ps1
+```
+
+El script sube `frontend/index.html` al bucket S3 configurado e invalida la distribución CloudFront automáticamente.
+
+#### Opción B — Manual
 
 **1. Crear el bucket S3**
 
@@ -353,13 +386,14 @@ Para que el browser pueda llamar a la API desde CloudFront, agregá CORS en API 
 ### Uso
 
 1. Abrí la URL de CloudFront en el browser
-2. Ingresá la URL de tu API Gateway
-3. Ingresá tu API Key de ClickUp (`pk_...`)
-4. Ingresá el List ID del tablero y hacé click en **Cargar tablero**
-5. Desde la tabla de tareas podés:
-   - Hacer click en el nombre de una tarea para abrirla en ClickUp
-   - Hacer click en **+ Comentar** para agregar un comentario
-   - Usar **↓ Descargar CSV** para exportar las tareas
+2. Ingresá tu API Key de ClickUp (`pk_...`) o `testing12345678` para modo demo
+3. Hacé click en **Cargar tablero**
+4. Usá el sidebar izquierdo para filtrar por estado, asignado, tag o actividad del día
+5. Hacé click en cualquier encabezado de columna para ordenar la tabla
+6. Hacé click en el texto de un comentario para ver el contenido completo en un popover
+7. Hacé click en **+ Comentar** para agregar un comentario a una tarea
+8. Usá **↓ Descargar CSV** para exportar las tareas
+9. Usá el toggle 🌙/☀️ en el header para cambiar entre modo oscuro y claro
 
 ---
 

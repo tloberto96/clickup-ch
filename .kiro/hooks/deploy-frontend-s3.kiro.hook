@@ -1,0 +1,12 @@
+{
+  "name": "Deploy Frontend a S3",
+  "version": "1.0.0",
+  "description": "Sube frontend/index.html a S3 e invalida CloudFront. Lee credenciales desde .env.deploy.",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "powershell -ExecutionPolicy Bypass -File deploy_frontend.ps1"
+  }
+}

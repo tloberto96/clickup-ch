@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClickUp Board Manager</title>
+  <title>Guri Data Team Board Manager</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -19,6 +19,23 @@
       --warning:   #f5a623;
       --text:      #e2e4f0;
       --muted:     #7b7f9e;
+      --radius:    10px;
+      --font:      'Inter', system-ui, sans-serif;
+    }
+
+    /* ── Modo claro ── */
+    html.light {
+      --bg:        #f4f5f7;
+      --surface:   #ffffff;
+      --surface2:  #eef0f4;
+      --border:    #d0d4e0;
+      --accent:    #7c5cfc;
+      --accent-h:  #6344e0;
+      --danger:    #d94f4f;
+      --success:   #2aaa72;
+      --warning:   #d4880a;
+      --text:      #1a1d27;
+      --muted:     #6b7280;
       --radius:    10px;
       --font:      'Inter', system-ui, sans-serif;
     }
@@ -73,6 +90,85 @@
       flex-direction: column;
       gap: 24px;
     }
+
+    /* ── Sidebar + content layout ── */
+    .page-layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      padding: 24px 16px;
+      position: sticky;
+      top: 56px;
+      max-height: calc(100vh - 56px);
+      overflow-y: auto;
+      display: none;  /* oculto hasta que cargue el tablero */
+      flex-direction: column;
+      gap: 20px;
+    }
+    .sidebar.visible { display: flex; }
+
+    .sidebar-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .filter-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      transition: background .1s;
+      user-select: none;
+    }
+    .filter-option:hover { background: var(--surface2); }
+    .filter-option input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      background: none;
+    }
+    .filter-option .filter-label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .filter-clear {
+      font-size: 11px;
+      color: var(--accent);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: var(--font);
+      text-align: left;
+      margin-top: 2px;
+    }
+    .filter-clear:hover { text-decoration: underline; }
+
+    .sidebar::-webkit-scrollbar { width: 3px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
     /* ── Cards ── */
     .card {
@@ -173,11 +269,25 @@
       white-space: nowrap;
       border-bottom: 1px solid var(--border);
     }
+    thead th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th.sortable:hover { color: var(--text); }
+    thead th.sort-asc  { color: var(--accent); }
+    thead th.sort-desc { color: var(--accent); }
+    thead th.sort-asc  .sort-icon::after { content: ' ↑'; }
+    thead th.sort-desc .sort-icon::after { content: ' ↓'; }
+    thead th.sortable:not(.sort-asc):not(.sort-desc) .sort-icon::after { content: ' ↕'; opacity: .35; }
     tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--surface2); }
     tbody td { padding: 10px 14px; vertical-align: middle; }
-    tbody td.task-name { max-width: 260px; }
+    tbody td.task-name {
+      max-width: 260px;
+      display: flex;
+      align-items: center;
+    }
     tbody td.task-name a {
       color: var(--text);
       text-decoration: none;
@@ -272,39 +382,81 @@
     .empty svg { margin-bottom: 12px; opacity: .4; }
     .empty p { font-size: 13px; }
 
-    /* ── Tooltip ── */
-    .tooltip-wrap {
-      position: relative;
-      display: block;
-      max-width: 280px;
+    /* ── Comment popover ── */
+    .comment-cell {
+      max-width: 260px;
     }
-    .tooltip-wrap .truncated {
+    .comment-truncated {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      cursor: default;
-    }
-    .tooltip-wrap .tooltip-box {
-      display: none;
-      position: absolute;
-      bottom: calc(100% + 6px);
-      left: 0;
-      background: #2a2d3e;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 10px 12px;
+      cursor: pointer;
       font-size: 13px;
-      line-height: 1.5;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: background .12s;
+    }
+    .comment-truncated:hover {
+      background: var(--surface2);
+    }
+    .comment-truncated .comment-user {
+      color: var(--muted);
+      font-size: 12px;
+      margin-right: 4px;
+    }
+
+    /* Popover flotante */
+    #commentPopover {
+      position: fixed;
+      z-index: 300;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 40px rgba(0,0,0,.55);
+      width: 320px;
+      max-height: 260px;
+      display: none;
+      flex-direction: column;
+    }
+    #commentPopover.visible { display: flex; }
+    .popover-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .popover-header .popover-user {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-h);
+    }
+    .popover-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .popover-close:hover { color: var(--text); }
+    .popover-body {
+      padding: 12px 14px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.6;
       color: var(--text);
       white-space: pre-wrap;
       word-break: break-word;
-      max-width: 340px;
-      min-width: 180px;
-      z-index: 50;
-      box-shadow: 0 8px 24px rgba(0,0,0,.4);
-      pointer-events: none;
+      flex: 1;
     }
-    .tooltip-wrap:hover .tooltip-box { display: block; }
+    /* scrollbar sutil */
+    .popover-body::-webkit-scrollbar { width: 4px; }
+    .popover-body::-webkit-scrollbar-track { background: transparent; }
+    .popover-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
     /* ── Tag pills ── */
     .tag-pill {
@@ -333,36 +485,148 @@
       color: var(--muted);
     }
     .hidden { display: none !important; }
+    #demoBanner:not(.hidden) { display: flex; }
+
+    /* ── Today badge ── */
+    .today-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #f5a623;
+      color: #0f1117;
+      font-size: 10px;
+      font-weight: 800;
+      margin-right: 6px;
+      flex-shrink: 0;
+      vertical-align: middle;
+      line-height: 1;
+    }
+
+    /* ── Theme switch ── */
+    .theme-switch {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .theme-switch .track {
+      width: 36px;
+      height: 20px;
+      border-radius: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      position: relative;
+      transition: background .2s, border-color .2s;
+      flex-shrink: 0;
+    }
+    .theme-switch .thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: transform .2s, background .2s;
+    }
+    html.light .theme-switch .track {
+      background: #d0d4e0;
+      border-color: #b8bdd0;
+    }
+    html.light .theme-switch .thumb {
+      transform: translateX(16px);
+      background: var(--accent);
+    }
   </style>
 </head>
 <body>
 
 <!-- ── Header ── -->
 <header>
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <rect width="24" height="24" rx="6" fill="#7c5cfc"/>
-    <path d="M7 13l3.5 3.5L17 9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 19.5L8.36 15.13C9.69 17.01 11.71 18.25 14 18.25C16.29 18.25 18.31 17.01 19.64 15.13L24 19.5C21.5 22.37 17.96 24.25 14 24.25C10.04 24.25 6.5 22.37 4 19.5Z" fill="#FF3D57"/>
+    <path d="M14 3.75L8.5 9.25L11.32 12.07C12.03 11.36 12.98 10.93 14 10.93C15.02 10.93 15.97 11.36 16.68 12.07L19.5 9.25L14 3.75Z" fill="#7B68EE"/>
+    <path d="M8.36 15.13L4 19.5C6.5 22.37 10.04 24.25 14 24.25C17.96 24.25 21.5 22.37 24 19.5L19.64 15.13C18.31 17.01 16.29 18.25 14 18.25C11.71 18.25 9.69 17.01 8.36 15.13Z" fill="url(#clickup_grad)"/>
+    <defs>
+      <linearGradient id="clickup_grad" x1="4" y1="19.5" x2="24" y2="19.5" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#FF3D57"/>
+        <stop offset="50%" stop-color="#FF7B54"/>
+        <stop offset="100%" stop-color="#FFC800"/>
+      </linearGradient>
+    </defs>
   </svg>
-  <h1>ClickUp Board Manager</h1>
+  <h1>Guri Data Team Board Manager</h1>
   <span class="spacer"></span>
+  <div class="theme-switch" onclick="toggleTheme()" title="Cambiar tema">
+    <span id="themeLabel">🌙</span>
+    <div class="track"><div class="thumb"></div></div>
+  </div>
   <div class="token-badge" id="tokenBadge">
     <span class="dot" id="tokenDot"></span>
     <span id="tokenStatus">Sin token</span>
   </div>
 </header>
 
-<!-- ── Main ── -->
+<!-- ── Page layout ── -->
+<div class="page-layout">
+
+<!-- ── Sidebar filtros ── -->
+<aside class="sidebar" id="filterSidebar">
+
+  <!-- Badge hoy -->
+  <div>
+    <div class="sidebar-section-title">Actividad</div>
+    <label class="filter-option">
+      <input type="checkbox" id="filterToday" onchange="applyFilters()" />
+      <span class="filter-label">
+        <span class="today-badge" style="margin-right:4px">!</span>Comentado hoy
+      </span>
+    </label>
+  </div>
+
+  <!-- Estado -->
+  <div>
+    <div class="sidebar-section-title">Estado</div>
+    <div id="filterStatus"></div>
+  </div>
+
+  <!-- Asignados -->
+  <div>
+    <div class="sidebar-section-title">Asignados</div>
+    <div id="filterAssignees"></div>
+  </div>
+
+  <!-- Tags -->
+  <div>
+    <div class="sidebar-section-title">Tags</div>
+    <div id="filterTags"></div>
+  </div>
+
+  <button class="filter-clear" onclick="clearFilters()">Limpiar filtros</button>
+
+</aside>
+
+<!-- ── Main content ── -->
 <main>
 
   <!-- Config -->
   <div class="card">
     <div class="card-title">Configuración</div>
-    <form onsubmit="event.preventDefault(); loadBoard()">
+    <form onsubmit="event.preventDefault(); loadBoard()" autocomplete="on">
     <div class="row">
       <div class="field">
         <label for="apiToken">API Key de ClickUp</label>
+        <!-- Campo usuario oculto requerido por el browser para guardar credenciales -->
+        <input type="text" name="username" value="clickup-user"
+               autocomplete="username" style="display:none" aria-hidden="true" tabindex="-1" />
         <input id="apiToken" type="password" placeholder="pk_xxxxxxxxxxxxxxxx"
-               name="clickup-api-key" autocomplete="current-password" />
+               name="password" autocomplete="current-password" />
       </div>
       <div class="field" style="display:flex;align-items:flex-end">
         <button type="submit" class="btn-primary" id="btnLoad">
@@ -372,6 +636,12 @@
     </div>
     <div id="configAlert" class="hidden" style="margin-top:12px"></div>
     </form>
+  </div>
+
+  <!-- Demo banner -->
+  <div id="demoBanner" class="hidden" style="background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);border-radius:var(--radius);padding:10px 16px;font-size:13px;color:#f5a623;gap:8px;align-items:center;">
+    <span style="font-size:16px">🧪</span>
+    <span><strong>Modo demo activo</strong> — los datos son ficticios y los comentarios no se envían a ClickUp.</span>
   </div>
 
   <!-- Board info -->
@@ -406,6 +676,17 @@
 
 </main>
 
+</div><!-- /.page-layout -->
+
+<!-- ── Comment Popover ── -->
+<div id="commentPopover" role="dialog" aria-modal="false" aria-label="Comentario completo">
+  <div class="popover-header">
+    <span class="popover-user" id="popoverUser"></span>
+    <button class="popover-close" onclick="closePopover()" aria-label="Cerrar">×</button>
+  </div>
+  <div class="popover-body" id="popoverBody"></div>
+</div>
+
 <!-- ── Comment Modal ── -->
 <div class="overlay" id="commentOverlay" onclick="closeModal(event)">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -438,13 +719,156 @@
 
 <script>
   // ── Constantes ─────────────────────────────────────────────────────────
-  const API_BASE = 'https://jq5o7ema2d.execute-api.us-east-1.amazonaws.com';
-  const LIST_ID  = '901713225426';
+  const API_BASE    = 'https://jq5o7ema2d.execute-api.us-east-1.amazonaws.com';
+  const LIST_ID     = '901713225426';
+  const DEMO_TOKEN  = 'testing12345678';
+
+  // ── Mock data ───────────────────────────────────────────────────────────
+  const LOREM = [
+    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+    'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+    'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.',
+    'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
+    'Curabitur pretium tincidunt lacus. Nulla gravida orci a odio, et tempus feugiat.',
+    'Nullam varius, turpis molestie dictum semper, nunc augue iaculis purus, quis volutpat massa diam quis elit.',
+    'Aenean ut eros et nisl sagittis vestibulum. Nullam nulla eros, ultricies sit amet, nonummy id, imperdiet feugiat.',
+    'Phasellus ultrices nulla quis nibh. Quisque a lectus. Donec consectetuer ligula vulputate sem tristique cursus.',
+  ];
+
+  const STATUSES = [
+    { status: 'to do',       color: '#87909e' },
+    { status: 'in progress', color: '#5f55ee' },
+    { status: 'at risk',     color: '#e16b16' },
+    { status: 'on hold',     color: '#aa8d80' },
+    { status: 'complete',    color: '#008844' },
+  ];
+
+  const USERS   = ['maria.garcia', 'juan.perez', 'ana.lopez', 'carlos.ruiz', 'sofia.martinez'];
+  const TAGS    = [
+    { name: 'backend',  tag_bg: '#5f55ee', tag_fg: '#ffffff' },
+    { name: 'frontend', tag_bg: '#e16b16', tag_fg: '#ffffff' },
+    { name: 'bug',      tag_bg: '#e05c5c', tag_fg: '#ffffff' },
+    { name: 'feature',  tag_bg: '#3ecf8e', tag_fg: '#0f1117' },
+    { name: 'urgent',   tag_bg: '#f5a623', tag_fg: '#0f1117' },
+  ];
+
+  const TASK_NAMES = [
+    'Implementar autenticación OAuth2',
+    'Revisar diseño de base de datos',
+    'Corregir bug en módulo de pagos',
+    'Actualizar documentación de API',
+    'Optimizar queries de reportes',
+  ];
+
+  function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function makeMockBoard() {
+    const tasks = TASK_NAMES.map((name, i) => {
+      const status  = STATUSES[i % STATUSES.length];
+      const numAssignees = randInt(1, 3);
+      const assignees = Array.from({ length: numAssignees }, () => ({
+        username: rand(USERS), email: rand(USERS) + '@empresa.com',
+      }));
+      const numTags = randInt(0, 2);
+      const tags = Array.from(new Set(Array.from({ length: numTags }, () => randInt(0, TAGS.length - 1))))
+        .map(idx => TAGS[idx]);
+
+      return {
+        id:        `mock-task-${i + 1}`,
+        name,
+        status:    { status: status.status, color: status.color, type: 'custom' },
+        assignees,
+        tags,
+        url:       `https://app.clickup.com/t/mock-task-${i + 1}`,
+        priority:  null,
+        due_date:  null,
+        custom_fields: [{ name: 'Asignee', value: rand(USERS) }],
+      };
+    });
+
+    return {
+      list: {
+        id:         LIST_ID,
+        name:       'Tablero Demo',
+        task_count: tasks.length,
+        statuses:   STATUSES,
+      },
+      tasks_count: tasks.length,
+      tasks,
+      members:      [],
+      views:        [],
+      custom_fields:[],
+    };
+  }
+
+  function makeMockComments(taskId) {
+    const numComments = randInt(1, 3);
+    const now = Date.now();
+    return {
+      comments: Array.from({ length: numComments }, (_, i) => ({
+        id:           `mock-comment-${taskId}-${i}`,
+        comment_text: rand(LOREM),
+        user:         { username: rand(USERS) },
+        date:         now - (numComments - i) * 3600000 * randInt(1, 48),
+      })),
+    };
+  }
+
+  function isDemoMode() { return token() === DEMO_TOKEN; }
+
+  async function apiFetch(url, options = {}) {
+    if (!isDemoMode()) return fetch(url, options);
+
+    // Simula latencia de red
+    await new Promise(r => setTimeout(r, randInt(80, 300)));
+
+    if (url.includes('/export/csv')) {
+      // Genera un CSV mock
+      const rows = [
+        'name,status,assignees,last_comment,PM',
+        ...TASK_NAMES.map((n, i) =>
+          `"${n}","${STATUSES[i % STATUSES.length].status}","${rand(USERS)}","${rand(LOREM).slice(0, 60)}...","${rand(USERS)}"`
+        ),
+      ].join('\n');
+      return new Response(rows, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': 'attachment; filename="clickup_demo.csv"',
+        },
+      });
+    }
+
+    if (url.includes('/comments')) {
+      const taskId = url.match(/tasks\/([^/]+)\/comments/)?.[1] || 'x';
+      return new Response(JSON.stringify(makeMockComments(taskId)), { status: 200 });
+    }
+
+    if (url.includes('/board/')) {
+      return new Response(JSON.stringify(makeMockBoard()), { status: 200 });
+    }
+
+    return new Response(JSON.stringify({ detail: 'Mock: endpoint no soportado' }), { status: 404 });
+  }
 
   // ── State ──────────────────────────────────────────────────────────────
   let state = {
-    tasks:      [],
-    activeTask: null,   // { id, name }
+    allTasks:   [],   // todas las tareas sin filtro de estado
+    tasks:      [],   // tareas filtradas por estado (in progress / freezed)
+    activeTask: null,
+    sort: { col: 'comment_date', dir: 'desc' },
+  };
+
+  // Almacena { user, text, date } por task id para el popover y el ordenamiento
+  const commentStore = new Map();
+
+  // ── Filter state ───────────────────────────────────────────────────────
+  const activeFilters = {
+    today:     false,
+    statuses:  new Set(),
+    assignees: new Set(),
+    tags:      new Set(),
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────
@@ -489,6 +913,19 @@
 
   $('apiToken').addEventListener('input', updateTokenBadge);
 
+  // ── Theme toggle ───────────────────────────────────────────────────────
+  function toggleTheme() {
+    const isLight = document.documentElement.classList.toggle('light');
+    $('themeLabel').textContent = isLight ? '☀️' : '🌙';
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  }
+
+  // Restaurar preferencia guardada
+  if (localStorage.getItem('theme') === 'light') {
+    document.documentElement.classList.add('light');
+    $('themeLabel').textContent = '☀️';
+  }
+
   // Status color mapping
   function statusBadge(status) {
     const s = (status || '').toLowerCase();
@@ -522,22 +959,33 @@
     setLoading('btnLoad', true, ' Cargando…');
     $('boardInfo').classList.add('hidden');
     $('tasksCard').classList.add('hidden');
+    $('filterSidebar').classList.remove('visible');
+
+    // Banner modo demo
+    const demoBanner = $('demoBanner');
+    if (isDemoMode()) {
+      demoBanner.classList.remove('hidden');
+    } else {
+      demoBanner.classList.add('hidden');
+    }
 
     try {
-      const res = await fetch(`${API_BASE}/board/${LIST_ID}`, { headers: headers() });
+      const res = await apiFetch(`${API_BASE}/board/${LIST_ID}`, { headers: headers() });
       const data = await res.json();
       if (!res.ok) { showAlert('configAlert','error', data.detail || `Error ${res.status}`); return; }
 
-      state.tasks = data.tasks || [];
+      state.allTasks = data.tasks || [];
+      state.tasks    = state.allTasks;  // sin filtro hardcodeado
+      commentStore.clear();
 
       renderBoardInfo(data.list);
-      renderTasks(state.tasks);
+      renderTasks(state.allTasks);
+      buildFilterSidebar();
 
       $('boardInfo').classList.remove('hidden');
       $('tasksCard').classList.remove('hidden');
 
-      // Carga comentarios en background y actualiza cada fila al llegar
-      loadCommentsInBackground(state.tasks);
+      loadCommentsInBackground(state.allTasks);
     } catch(e) {
       showAlert('configAlert','error', `No se pudo conectar con la API: ${e.message}`);
     } finally {
@@ -568,6 +1016,170 @@
       </div>`;
   }
 
+  // ── Filters ────────────────────────────────────────────────────────────
+
+  function buildFilterSidebar() {
+    // Resetear filtros activos al reconstruir el sidebar
+    activeFilters.today = false;
+    activeFilters.statuses.clear();
+    activeFilters.assignees.clear();
+    activeFilters.tags.clear();
+    $('filterToday').checked = false;
+
+    // Recolectar valores únicos de las tareas
+    const statuses  = new Set();
+    const assignees = new Set();
+    const tags      = new Set();
+
+    state.allTasks.forEach(t => {
+      if (t.status?.status) statuses.add(t.status.status);
+      (t.assignees || []).forEach(a => { if (a.username) assignees.add(a.username); });
+      (t.tags || []).forEach(tag => { if (tag.name) tags.add(tag.name); });
+    });
+
+    renderFilterGroup('filterStatus',    statuses,  'statuses');
+    renderFilterGroup('filterAssignees', assignees, 'assignees');
+    renderFilterGroup('filterTags',      tags,      'tags');
+
+    // Pre-seleccionar in progress y freezed
+    const defaultStatuses = ['in progress', 'freezed'];
+    defaultStatuses.forEach(s => {
+      if (statuses.has(s)) {
+        activeFilters.statuses.add(s);
+        const cb = document.querySelector(`#filterStatus input[value="${s}"]`);
+        if (cb) cb.checked = true;
+      }
+    });
+
+    $('filterSidebar').classList.add('visible');
+    applyFilters();
+  }
+
+  function renderFilterGroup(containerId, values, filterKey) {
+    const container = $(containerId);
+    container.innerHTML = '';
+    [...values].sort().forEach(val => {
+      const id  = `filter-${filterKey}-${val.replace(/\s+/g, '-')}`;
+      const lbl = document.createElement('label');
+      lbl.className = 'filter-option';
+      lbl.innerHTML = `
+        <input type="checkbox" id="${escHtml(id)}" value="${escHtml(val)}"
+               onchange="onFilterChange('${filterKey}', '${escHtml(val.replace(/'/g, "\\'"))}', this.checked)" />
+        <span class="filter-label">${escHtml(val)}</span>`;
+      container.appendChild(lbl);
+    });
+  }
+
+  function onFilterChange(filterKey, value, checked) {
+    if (filterKey === 'today') {
+      activeFilters.today = checked;
+    } else {
+      if (checked) activeFilters[filterKey].add(value);
+      else         activeFilters[filterKey].delete(value);
+    }
+    applyFilters();
+  }
+
+  function applyFilters() {
+    activeFilters.today = $('filterToday').checked;
+    const filtered = state.allTasks.filter(t => {
+      // Filtro badge hoy
+      if (activeFilters.today) {
+        const entry = commentStore.get(t.id);
+        if (!entry || !entry.date) return false;
+        const d     = new Date(entry.date);
+        const today = new Date();
+        const isToday = d.getFullYear() === today.getFullYear() &&
+                        d.getMonth()    === today.getMonth()    &&
+                        d.getDate()     === today.getDate();
+        if (!isToday) return false;
+      }
+      // Filtro estado
+      if (activeFilters.statuses.size > 0) {
+        if (!activeFilters.statuses.has(t.status?.status)) return false;
+      }
+      // Filtro asignados
+      if (activeFilters.assignees.size > 0) {
+        const taskAssignees = (t.assignees || []).map(a => a.username);
+        if (!taskAssignees.some(a => activeFilters.assignees.has(a))) return false;
+      }
+      // Filtro tags
+      if (activeFilters.tags.size > 0) {
+        const taskTags = (t.tags || []).map(tag => tag.name);
+        if (!taskTags.some(tag => activeFilters.tags.has(tag))) return false;
+      }
+      return true;
+    });
+
+    // Actualizar contador y reordenar filas visibles
+    $('taskCount').textContent = filtered.size !== undefined ? filtered.size : filtered.length;
+    const tbody = document.querySelector('#tableWrap tbody');
+    if (!tbody) return;
+
+    tbody.querySelectorAll('tr[data-task-id]').forEach(row => {
+      const visible = filtered.some(t => t.id === row.dataset.taskId);
+      row.style.display = visible ? '' : 'none';
+    });
+
+    $('taskCount').textContent = filtered.length;
+  }
+
+  function clearFilters() {
+    activeFilters.today = false;
+    activeFilters.statuses.clear();
+    activeFilters.assignees.clear();
+    activeFilters.tags.clear();
+
+    $('filterToday').checked = false;
+    document.querySelectorAll('#filterSidebar input[type="checkbox"]').forEach(cb => {
+      cb.checked = false;
+    });
+    applyFilters();
+  }
+
+  // ── Sorting ────────────────────────────────────────────────────────────
+  function sortTasks(tasks) {
+    const { col, dir } = state.sort;
+    const mult = dir === 'asc' ? 1 : -1;
+
+    return [...tasks].sort((a, b) => {
+      let va, vb;
+
+      if (col === 'name') {
+        va = (a.name || '').toLowerCase();
+        vb = (b.name || '').toLowerCase();
+      } else if (col === 'status') {
+        va = (a.status?.status || '').toLowerCase();
+        vb = (b.status?.status || '').toLowerCase();
+      } else if (col === 'assignees') {
+        va = (a.assignees || []).map(x => x.username || x.email || '').join(',').toLowerCase();
+        vb = (b.assignees || []).map(x => x.username || x.email || '').join(',').toLowerCase();
+      } else if (col === 'tags') {
+        va = (a.tags || []).map(x => x.name || '').join(',').toLowerCase();
+        vb = (b.tags || []).map(x => x.name || '').join(',').toLowerCase();
+      } else if (col === 'comment_date') {
+        va = commentStore.get(a.id)?.date || 0;
+        vb = commentStore.get(b.id)?.date || 0;
+        // desc = más reciente primero (vb - va), asc = más viejo primero (va - vb)
+        return dir === 'desc' ? vb - va : va - vb;
+      }
+
+      if (va < vb) return -1 * mult;
+      if (va > vb) return  1 * mult;
+      return 0;
+    });
+  }
+
+  function setSort(col) {
+    if (state.sort.col === col) {
+      state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      state.sort.col = col;
+      state.sort.dir = col === 'comment_date' ? 'desc' : 'asc';
+    }
+    reorderTableRows();
+  }
+
   function renderTasks(tasks) {
     $('taskCount').textContent = tasks.length;
     if (!tasks.length) {
@@ -581,14 +1193,16 @@
       return;
     }
 
-    const rows = tasks.map(t => {
+    const sorted = sortTasks(tasks);
+
+    const rows = sorted.map(t => {
       const assignees = (t.assignees || []).map(a => escHtml(a.username || a.email || '')).join(', ') || '—';
       const taskUrl   = t.url ? `href="${escHtml(t.url)}" target="_blank" rel="noopener"` : '';
 
       const tagPills = (t.tags || []).map(tag => {
         const bg    = tag.tag_bg    || tag.color || '#3a3f5c';
         const color = tag.tag_fg    || '#e2e4f0';
-        return `<span class="tag-pill" style="background:${escHtml(bg)}22;color:${escHtml(color)};border:1px solid ${escHtml(bg)}55">${escHtml(tag.name)}</span>`;
+        return `<span class="tag-pill" style="background:${escHtml(bg)};color:#ffffff">${escHtml(tag.name)}</span>`;
       }).join('') || '<span style="color:var(--muted)">—</span>';
 
       return `
@@ -608,60 +1222,129 @@
         </tr>`;
     }).join('');
 
+    function thClass(col) {
+      if (state.sort.col !== col) return 'sortable';
+      return `sortable sort-${state.sort.dir}`;
+    }
+
     $('tableWrap').innerHTML = `
       <table>
         <thead>
           <tr>
-            <th>Tarea</th><th>Estado</th><th>Asignados</th><th>Tags</th><th>Último comentario</th><th></th>
+            <th class="${thClass('name')}"        onclick="setSort('name')">Tarea<span class="sort-icon"></span></th>
+            <th class="${thClass('status')}"      onclick="setSort('status')">Estado<span class="sort-icon"></span></th>
+            <th class="${thClass('assignees')}"   onclick="setSort('assignees')">Asignados<span class="sort-icon"></span></th>
+            <th class="${thClass('tags')}"        onclick="setSort('tags')">Tags<span class="sort-icon"></span></th>
+            <th class="${thClass('comment_date')}" onclick="setSort('comment_date')">Último comentario<span class="sort-icon"></span></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>`;
   }
 
-  // Carga comentarios de cada tarea en paralelo y actualiza la celda al llegar
+  // Carga comentarios de cada tarea en paralelo.
+  // Solo guarda datos en el store y actualiza celdas. NO toca el orden de las filas.
   async function loadCommentsInBackground(tasks) {
+    const isFullLoad = tasks.length > 1;
+
     await Promise.all(tasks.map(async t => {
       try {
-        const res  = await fetch(`${API_BASE}/board/${LIST_ID}/tasks/${t.id}/comments`, { headers: headers() });
+        const res = await apiFetch(`${API_BASE}/board/${LIST_ID}/tasks/${t.id}/comments`, { headers: headers() });
         if (!res.ok) return;
         const data = await res.json();
-
         const comments = data.comments || [];
-        const cell = document.querySelector(`tr[data-task-id="${t.id}"] .last-comment-cell`);
-        if (!cell) return;
 
         if (!comments.length) {
-          cell.innerHTML = '<span style="color:var(--muted)">—</span>';
+          commentStore.set(t.id, null);
+          updateCommentCell(t.id, null);
           return;
         }
 
-        const c        = comments[comments.length - 1];
-        const user     = escHtml((c.user || {}).username || '?');
-        const fullText = (
-          (c.comment_text || '').trim() ||
-          (c.comment || []).map(b => (b && b.text) || '').join(' ').trim()
-        );
+        const sorted   = [...comments].sort((a, b) => (+b.date || 0) - (+a.date || 0));
+        const c        = sorted[0];
+        const username = (c.user || {}).username || '?';
+        const fullText = (c.comment_text || '').trim() ||
+          (c.comment || []).map(b => (b && b.text) || '').join(' ').trim();
+        const date     = +c.date || 0;
 
-        if (!fullText) {
-          cell.innerHTML = '<span style="color:var(--muted)">—</span>';
-          return;
-        }
-
-        const oneLiner  = escHtml(fullText.replace(/\n/g, ' '));
-        const fullEsc   = escHtml(fullText);
-        cell.innerHTML  = `
-          <div class="tooltip-wrap">
-            <div class="truncated">
-              <span style="color:var(--muted);font-size:12px">${user}:</span> ${oneLiner}
-            </div>
-            <div class="tooltip-box"><strong>${user}</strong>\n${fullEsc}</div>
-          </div>`;
+        commentStore.set(t.id, { user: username, text: fullText, date });
+        updateCommentCell(t.id, { user: username, text: fullText, date });
       } catch(_) {
-        const cell = document.querySelector(`tr[data-task-id="${t.id}"] .last-comment-cell`);
-        if (cell) cell.innerHTML = '<span style="color:var(--muted)">—</span>';
+        commentStore.set(t.id, null);
+        updateCommentCell(t.id, null);
       }
     }));
+
+    // Todos los comentarios cargaron: reordenar filas sin re-renderizar
+    if (isFullLoad) reorderTableRows();
+  }
+
+  // Actualiza solo la celda de comentario de una tarea específica
+  function updateCommentCell(taskId, entry) {
+    const cell = document.querySelector(`tr[data-task-id="${taskId}"] .last-comment-cell`);
+    if (!cell) return;
+
+    // Indicador de actividad hoy
+    const nameCell = document.querySelector(`tr[data-task-id="${taskId}"] .task-name`);
+    if (nameCell) {
+      const existing = nameCell.querySelector('.today-badge');
+      if (existing) existing.remove();
+      if (entry && entry.date) {
+        const commentDay = new Date(entry.date);
+        const today      = new Date();
+        const isToday    = commentDay.getFullYear() === today.getFullYear() &&
+                           commentDay.getMonth()     === today.getMonth()     &&
+                           commentDay.getDate()      === today.getDate();
+        if (isToday) {
+          const badge = document.createElement('span');
+          badge.className = 'today-badge';
+          badge.textContent = '!';
+          nameCell.insertBefore(badge, nameCell.firstChild);
+        }
+      }
+    }
+
+    if (!entry || !entry.text) {
+      cell.innerHTML = '<span style="color:var(--muted)">—</span>';
+      return;
+    }
+
+    const oneLiner = escHtml(entry.text.replace(/\n/g, ' '));
+    const dateStr  = entry.date ? new Date(entry.date).toLocaleString('es-AR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }) : '';
+
+    cell.innerHTML = `
+      <div class="comment-cell">
+        <div class="comment-truncated" data-task-ref="${escHtml(taskId)}">
+          <span class="comment-user">${escHtml(entry.user)}:</span>${oneLiner}
+        </div>
+        ${dateStr ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;padding-left:4px">${escHtml(dateStr)}</div>` : ''}
+      </div>`;
+  }
+
+  // Reordena las filas del DOM según el sort activo, sin re-renderizar celdas
+  function reorderTableRows() {
+    const tbody = document.querySelector('#tableWrap tbody');
+    if (!tbody) return;
+
+    const allRows = Array.from(tbody.querySelectorAll('tr[data-task-id]'));
+    const sorted  = sortTasks(state.allTasks);
+
+    // Mover cada fila al final en el orden correcto (appendChild es idempotente)
+    sorted.forEach(t => {
+      const row = allRows.find(r => r.dataset.taskId === t.id);
+      if (row) tbody.appendChild(row);
+    });
+
+    // Actualizar indicadores visuales de los headers
+    const colKeys = ['name', 'status', 'assignees', 'tags', 'comment_date'];
+    document.querySelectorAll('#tableWrap thead th.sortable').forEach((th, i) => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (colKeys[i] === state.sort.col) th.classList.add(`sort-${state.sort.dir}`);
+    });
   }
 
   // ── CSV download ────────────────────────────────────────────────────────
@@ -671,7 +1354,7 @@
     setLoading('btnCsv', true, ' Generando…');
 
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${API_BASE}/board/${LIST_ID}/export/csv`,
         { headers: headers() }
       );
@@ -703,6 +1386,62 @@
     }
   }
 
+  // ── Comment popover ────────────────────────────────────────────────────
+  let popoverOpen = false;
+
+  // Listener delegado: captura clics en cualquier .comment-truncated de la tabla
+  document.addEventListener('click', e => {
+    const trigger = e.target.closest('.comment-truncated');
+    if (trigger) {
+      const taskId = trigger.dataset.taskRef;
+      const entry  = commentStore.get(taskId);
+      if (entry) openPopover(e, entry.user, entry.text);
+      return;
+    }
+    // Cerrar si se hace clic fuera del popover
+    if (popoverOpen && !$('commentPopover').contains(e.target)) {
+      closePopover();
+    }
+  });
+
+  function openPopover(event, user, fullText) {
+    event.stopPropagation();
+    const pop = $('commentPopover');
+    $('popoverUser').textContent = user;
+    $('popoverBody').textContent = fullText;
+
+    // Mostrar fuera de pantalla para medir dimensiones reales
+    pop.style.left = '-9999px';
+    pop.style.top  = '-9999px';
+    pop.classList.add('visible');
+
+    requestAnimationFrame(() => {
+      const pw = pop.offsetWidth;
+      const ph = pop.offsetHeight;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      let x = event.clientX + 12;
+      let y = event.clientY + 12;
+
+      if (x + pw > vw - 12) x = event.clientX - pw - 12;
+      if (y + ph > vh - 12) y = event.clientY - ph - 12;
+      if (x < 8) x = 8;
+      if (y < 8) y = 8;
+
+      pop.style.left = `${x}px`;
+      pop.style.top  = `${y}px`;
+      popoverOpen = true;
+    });
+  }
+
+  function closePopover() {
+    $('commentPopover').classList.remove('visible');
+    popoverOpen = false;
+  }
+
+  // Cerrar popover al hacer clic fuera — ya manejado en el listener delegado de arriba
+
   // ── Comment modal ───────────────────────────────────────────────────────
   function openModal(taskId, taskName) {
     state.activeTask = { id: taskId, name: taskName };
@@ -721,7 +1460,10 @@
   }
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') $('commentOverlay').classList.remove('open');
+    if (e.key === 'Escape') {
+      $('commentOverlay').classList.remove('open');
+      closePopover();
+    }
   });
 
   async function submitComment() {
@@ -733,7 +1475,7 @@
     setLoading('btnSubmit', true, ' Enviando…');
 
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${API_BASE}/board/${LIST_ID}/tasks/${state.activeTask.id}/comments`,
         {
           method:  'POST',
@@ -745,7 +1487,12 @@
       if (res.status === 201 || res.ok) {
         showAlert('commentAlert','success','Comentario publicado correctamente.');
         $('commentText').value = '';
-        setTimeout(() => $('commentOverlay').classList.remove('open'), 1200);
+        // Refrescar el comentario de esta tarea en la tabla
+        const taskId = state.activeTask.id;
+        setTimeout(() => {
+          $('commentOverlay').classList.remove('open');
+          loadCommentsInBackground([{ id: taskId }]);
+        }, 1200);
       } else {
         const err = await res.json().catch(() => ({}));
         showAlert('commentAlert','error', err.detail || `Error ${res.status}`);

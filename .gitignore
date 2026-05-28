@@ -1,5 +1,6 @@
 # Variables de entorno — nunca commitear
 .env
+.env.deploy
 
 # Artefactos de build
 lambda_package.zip
