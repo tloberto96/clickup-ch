@@ -487,6 +487,31 @@
     .hidden { display: none !important; }
     #demoBanner:not(.hidden) { display: flex; }
 
+    /* ── Export option buttons ── */
+    .export-option-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      font-family: var(--font);
+    }
+    .export-option-btn:hover {
+      border-color: var(--accent);
+      background: var(--surface);
+    }
+    .export-option-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
     /* ── Today badge ── */
     .today-badge {
       display: inline-flex;
@@ -659,7 +684,7 @@
       <span class="card-title" style="margin-bottom:0">Tareas</span>
       <span class="count-badge" id="taskCount">0</span>
       <span class="spacer"></span>
-      <button class="btn-success btn-sm" onclick="downloadCsv()" id="btnCsv">
+      <button class="btn-success btn-sm" onclick="openExportModal()" id="btnCsv">
         ↓ Descargar CSV
       </button>
     </div>
@@ -688,6 +713,38 @@
     <button class="popover-close" onclick="closePopover()" aria-label="Cerrar">×</button>
   </div>
   <div class="popover-body" id="popoverBody"></div>
+</div>
+
+<!-- ── Export Modal ── -->
+<div class="overlay" id="exportOverlay" onclick="closeExportModal(event)">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:420px">
+    <div class="modal-header">
+      <div>
+        <h2>Descargar CSV</h2>
+        <div class="task-ref">Elegí el tipo de informe</div>
+      </div>
+      <button class="modal-close" onclick="closeExportModal()" aria-label="Cerrar">×</button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="export-option-btn" onclick="downloadCsvFiltered()">
+        <div class="export-option-icon">⚡</div>
+        <div>
+          <div style="font-weight:600;margin-bottom:2px">Con filtro aplicado</div>
+          <div style="font-size:12px;color:var(--muted)" id="exportFilteredDesc">Tareas visibles actualmente</div>
+        </div>
+      </button>
+      <button class="export-option-btn" onclick="downloadCsvFull()">
+        <div class="export-option-icon">📋</div>
+        <div>
+          <div style="font-weight:600;margin-bottom:2px">Informe completo</div>
+          <div style="font-size:12px;color:var(--muted)">Todas las tareas desde la API</div>
+        </div>
+      </button>
+    </div>
+
+    <div id="exportAlert" class="hidden" style="margin-top:4px"></div>
+  </div>
 </div>
 
 <!-- ── Comment Modal ── -->
@@ -1369,6 +1426,88 @@
     });
   }
 
+  // ── Export modal ────────────────────────────────────────────────────────
+
+  function openExportModal() {
+    // Contar tareas visibles para mostrar en la descripción
+    const visibleRows = document.querySelectorAll('#tableWrap tbody tr[data-task-id]:not([style*="display: none"]):not([style*="display:none"])');
+    const count = visibleRows.length;
+    $('exportFilteredDesc').textContent = `${count} tarea${count !== 1 ? 's' : ''} visible${count !== 1 ? 's' : ''} actualmente`;
+    hideAlert('exportAlert');
+    $('exportOverlay').classList.add('open');
+  }
+
+  function closeExportModal(e) {
+    if (e && e.target !== $('exportOverlay')) return;
+    $('exportOverlay').classList.remove('open');
+  }
+
+  // CSV client-side con el filtro aplicado
+  function downloadCsvFiltered() {
+    const visibleIds = new Set(
+      Array.from(document.querySelectorAll('#tableWrap tbody tr[data-task-id]:not([style*="display: none"]):not([style*="display:none"])'))
+        .map(r => r.dataset.taskId)
+    );
+
+    const tasks = state.allTasks.filter(t => visibleIds.has(t.id));
+    if (!tasks.length) {
+      showAlert('exportAlert', 'error', 'No hay tareas visibles para exportar.');
+      return;
+    }
+
+    const csvContent = buildCsvClientSide(tasks);
+    triggerCsvDownload(csvContent, `clickup_filtrado_${datestamp()}.csv`);
+    $('exportOverlay').classList.remove('open');
+  }
+
+  function buildCsvClientSide(tasks) {
+    const rows = tasks.map(t => {
+      const name      = t.name || '';
+      const status    = t.status?.status || '';
+      const assignees = (t.assignees || []).map(a => a.username || a.email || '').join(', ');
+      const pm        = (t.custom_fields || []).find(cf => cf.name === 'Asignee')?.value || '';
+      const pmVal     = typeof pm === 'object' ? (pm?.username || pm?.name || '') : (pm || '');
+      const entry     = commentStore.get(t.id);
+      const lastComment = entry?.text
+        ? `[${entry.date ? new Date(entry.date).toLocaleString('es-AR') : ''}] ${entry.user}: ${entry.text.replace(/\n/g, ' ')}`
+        : '';
+
+      return [name, status, assignees, lastComment, pmVal].map(csvEscape).join(',');
+    });
+
+    const header = ['name', 'status', 'assignees', 'last_comment', 'PM'].join(',');
+    return '\uFEFF' + header + '\n' + rows.join('\n');
+  }
+
+  function csvEscape(val) {
+    const s = String(val ?? '');
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  function datestamp() {
+    return new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  }
+
+  function triggerCsvDownload(content, filename) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // CSV completo desde la API (método original)
+  async function downloadCsvFull() {
+    hideAlert('exportAlert');
+    $('exportOverlay').classList.remove('open');
+    await downloadCsv();
+  }
+
   // ── CSV download ────────────────────────────────────────────────────────
   async function downloadCsv() {
     if (!state.tasks.length) return;
@@ -1484,6 +1623,7 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       $('commentOverlay').classList.remove('open');
+      $('exportOverlay').classList.remove('open');
       closePopover();
     }
   });

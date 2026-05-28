@@ -315,7 +315,9 @@ Interfaz web estática (Guri Data Team Board Manager) que permite a los usuarios
 - Ordenar la tabla por cualquier columna (nombre, estado, asignados, tags, fecha de comentario)
 - Ver el texto completo de un comentario en un popover flotante al hacer click
 - Agregar comentarios a tareas individuales
-- Descargar el CSV de tareas
+- Descargar el CSV de tareas con dos modalidades:
+  - **Con filtro aplicado**: genera el CSV en el cliente con las tareas actualmente visibles (respeta los filtros del sidebar)
+  - **Informe completo**: descarga el CSV completo desde la API (método original)
 - Cambiar entre modo oscuro y modo claro (preferencia persistida en `localStorage`)
 - Usar el **modo demo** con token `testing12345678` para explorar la UI sin una API Key real
 
@@ -394,7 +396,9 @@ Para que el browser pueda llamar a la API desde CloudFront, agregá CORS en API 
 6. Hacé click en cualquier encabezado de columna para ordenar la tabla
 7. Hacé click en el texto de un comentario para ver el contenido completo en un popover
 8. Hacé click en **+ Comentar** para agregar un comentario a una tarea
-9. Usá **↓ Descargar CSV** para exportar las tareas
+9. Usá **↓ Descargar CSV** para exportar las tareas — se abre un modal con dos opciones:
+   - **Con filtro aplicado**: exporta solo las tareas visibles (generado en el cliente, instantáneo)
+   - **Informe completo**: descarga todas las tareas desde la API
 10. Usá el toggle 🌙/☀️ en el header para cambiar entre modo oscuro y claro
 
 ---
