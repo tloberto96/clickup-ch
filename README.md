@@ -308,7 +308,8 @@ ch-clickup/
 ## Frontend (S3 + CloudFront)
 
 Interfaz web estática (Guri Data Team Board Manager) que permite a los usuarios:
-- Ingresar su API Key de ClickUp y cargar el tablero configurado
+- Ingresar su API Key de ClickUp y cargar el tablero configurado (el formulario se oculta al cargar con éxito y reaparece ante errores)
+- Recargar el tablero en cualquier momento con el botón **↺ Recargar** sin necesidad de reingresar el token
 - Ver todas las tareas con sus estados, asignados, tags y último comentario
 - Filtrar tareas por estado, asignado, tag y actividad del día desde un sidebar lateral
 - Ordenar la tabla por cualquier columna (nombre, estado, asignados, tags, fecha de comentario)
@@ -387,13 +388,14 @@ Para que el browser pueda llamar a la API desde CloudFront, agregá CORS en API 
 
 1. Abrí la URL de CloudFront en el browser
 2. Ingresá tu API Key de ClickUp (`pk_...`) o `testing12345678` para modo demo
-3. Hacé click en **Cargar tablero**
-4. Usá el sidebar izquierdo para filtrar por estado, asignado, tag o actividad del día
-5. Hacé click en cualquier encabezado de columna para ordenar la tabla
-6. Hacé click en el texto de un comentario para ver el contenido completo en un popover
-7. Hacé click en **+ Comentar** para agregar un comentario a una tarea
-8. Usá **↓ Descargar CSV** para exportar las tareas
-9. Usá el toggle 🌙/☀️ en el header para cambiar entre modo oscuro y claro
+3. Hacé click en **Cargar tablero** — el formulario de configuración se oculta automáticamente al cargar con éxito y vuelve a mostrarse si ocurre un error
+4. Usá el botón **↺ Recargar** en el encabezado del tablero para refrescar los datos sin tener que reingresar el token
+5. Usá el sidebar izquierdo para filtrar por estado, asignado, tag o actividad del día
+6. Hacé click en cualquier encabezado de columna para ordenar la tabla
+7. Hacé click en el texto de un comentario para ver el contenido completo en un popover
+8. Hacé click en **+ Comentar** para agregar un comentario a una tarea
+9. Usá **↓ Descargar CSV** para exportar las tareas
+10. Usá el toggle 🌙/☀️ en el header para cambiar entre modo oscuro y claro
 
 ---
 

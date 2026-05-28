@@ -616,7 +616,7 @@
 <main>
 
   <!-- Config -->
-  <div class="card">
+  <div class="card" id="configCard">
     <div class="card-title">Configuración</div>
     <form onsubmit="event.preventDefault(); loadBoard()" autocomplete="on">
     <div class="row">
@@ -646,7 +646,10 @@
 
   <!-- Board info -->
   <div class="card hidden" id="boardInfo">
-    <div class="card-title">Tablero</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:0">Tablero</div>
+      <button class="btn-ghost btn-sm" onclick="reloadBoard()" id="btnReload">↺ Recargar</button>
+    </div>
     <div id="boardInfoContent"></div>
   </div>
 
@@ -952,9 +955,24 @@
   }
 
   // ── Load board ─────────────────────────────────────────────────────────
+  async function reloadBoard() {
+    if (!token()) {
+      $('configCard').classList.remove('hidden');
+      return;
+    }
+    const btn = $('btnReload');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:1.5px;border-top-color:#fff"></span> Recargando…';
+    await loadBoard();
+    btn.disabled = false;
+    btn.innerHTML = '↺ Recargar';
+  }
+
   async function loadBoard() {
     hideAlert('configAlert');
     if (!token()) { showAlert('configAlert','error','Ingresá tu API Key de ClickUp.'); return; }
+
+    setLoading('btnLoad', true, ' Cargando…');
 
     setLoading('btnLoad', true, ' Cargando…');
     $('boardInfo').classList.add('hidden');
@@ -974,6 +992,9 @@
       const data = await res.json();
       if (!res.ok) { showAlert('configAlert','error', data.detail || `Error ${res.status}`); return; }
 
+      // Ocultar configuración al cargar exitosamente
+      $('configCard').classList.add('hidden');
+
       state.allTasks = data.tasks || [];
       state.tasks    = state.allTasks;  // sin filtro hardcodeado
       commentStore.clear();
@@ -987,6 +1008,7 @@
 
       loadCommentsInBackground(state.allTasks);
     } catch(e) {
+      $('configCard').classList.remove('hidden');
       showAlert('configAlert','error', `No se pudo conectar con la API: ${e.message}`);
     } finally {
       $('btnLoad').disabled = false;
