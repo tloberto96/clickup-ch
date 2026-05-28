@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClickUp Board Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --surface2:  #22263a;
+      --border:    #2e3250;
+      --accent:    #7c5cfc;
+      --accent-h:  #9b7ffe;
+      --danger:    #e05c5c;
+      --success:   #3ecf8e;
+      --warning:   #f5a623;
+      --text:      #e2e4f0;
+      --muted:     #7b7f9e;
+      --radius:    10px;
+      --font:      'Inter', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header svg { flex-shrink: 0; }
+    header h1 { font-size: 16px; font-weight: 600; }
+    header .spacer { flex: 1; }
+    header .token-badge {
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    header .token-badge .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--danger);
+    }
+    header .token-badge .dot.ok { background: var(--success); }
+
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── Form elements ── */
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input, textarea, select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    input[type="password"] { letter-spacing: .1em; }
+    textarea { resize: vertical; min-height: 80px; }
+    select option { background: var(--surface2); }
+
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+
+    /* ── Buttons ── */
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 7px;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 9px 18px;
+      transition: opacity .15s, background .15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary  { background: var(--accent);  color: #fff; }
+    .btn-primary:hover:not(:disabled)  { background: var(--accent-h); }
+    .btn-success  { background: var(--success); color: #0f1117; }
+    .btn-success:hover:not(:disabled)  { opacity: .85; }
+    .btn-ghost    { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled)    { border-color: var(--accent); color: var(--accent); }
+    .btn-danger   { background: var(--danger);  color: #fff; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+    /* ── Checkbox toggle ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* ── Task table ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--surface2);
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 10px 14px; vertical-align: middle; }
+    tbody td.task-name { max-width: 260px; }
+    tbody td.task-name a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    tbody td.task-name a:hover { color: var(--accent); }
+
+    /* ── Status badge ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+
+    /* ── Comment modal ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .modal-header h2 { font-size: 15px; font-weight: 600; }
+    .modal-header .task-ref { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1;
+      padding: 0;
+      cursor: pointer;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+    /* ── Alerts ── */
+    .alert {
+      border-radius: 7px;
+      padding: 10px 14px;
+      font-size: 13px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .alert-error   { background: rgba(224,92,92,.12);  border: 1px solid rgba(224,92,92,.3);  color: #f08080; }
+    .alert-success { background: rgba(62,207,142,.12); border: 1px solid rgba(62,207,142,.3); color: var(--success); }
+    .alert-info    { background: rgba(124,92,252,.12); border: 1px solid rgba(124,92,252,.3); color: var(--accent-h); }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+    .empty svg { margin-bottom: 12px; opacity: .4; }
+    .empty p { font-size: 13px; }
+
+    /* ── Tooltip ── */
+    .tooltip-wrap {
+      position: relative;
+      display: block;
+      max-width: 280px;
+    }
+    .tooltip-wrap .truncated {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: default;
+    }
+    .tooltip-wrap .tooltip-box {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 0;
+      background: #2a2d3e;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-width: 340px;
+      min-width: 180px;
+      z-index: 50;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      pointer-events: none;
+    }
+    .tooltip-wrap:hover .tooltip-box { display: block; }
+
+    /* ── Tag pills ── */
+    .tag-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      margin: 1px 2px 1px 0;
+      white-space: nowrap;
+    }
+    .section-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .section-actions .spacer { flex: 1; }
+    .count-badge {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <rect width="24" height="24" rx="6" fill="#7c5cfc"/>
+    <path d="M7 13l3.5 3.5L17 9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <h1>ClickUp Board Manager</h1>
+  <span class="spacer"></span>
+  <div class="token-badge" id="tokenBadge">
+    <span class="dot" id="tokenDot"></span>
+    <span id="tokenStatus">Sin token</span>
+  </div>
+</header>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- Config -->
+  <div class="card">
+    <div class="card-title">Configuración</div>
+    <form onsubmit="event.preventDefault(); loadBoard()">
+    <div class="row">
+      <div class="field">
+        <label for="apiToken">API Key de ClickUp</label>
+        <input id="apiToken" type="password" placeholder="pk_xxxxxxxxxxxxxxxx"
+               name="clickup-api-key" autocomplete="current-password" />
+      </div>
+      <div class="field" style="display:flex;align-items:flex-end">
+        <button type="submit" class="btn-primary" id="btnLoad">
+          <span>Cargar tablero</span>
+        </button>
+      </div>
+    </div>
+    <div id="configAlert" class="hidden" style="margin-top:12px"></div>
+    </form>
+  </div>
+
+  <!-- Board info -->
+  <div class="card hidden" id="boardInfo">
+    <div class="card-title">Tablero</div>
+    <div id="boardInfoContent"></div>
+  </div>
+
+  <!-- Tasks -->
+  <div class="card hidden" id="tasksCard">
+    <div class="section-actions">
+      <span class="card-title" style="margin-bottom:0">Tareas</span>
+      <span class="count-badge" id="taskCount">0</span>
+      <span class="spacer"></span>
+      <button class="btn-success btn-sm" onclick="downloadCsv()" id="btnCsv">
+        ↓ Descargar CSV
+      </button>
+    </div>
+
+    <div id="tasksAlert" class="hidden" style="margin-bottom:12px"></div>
+
+    <div class="table-wrap" id="tableWrap">
+      <div class="empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        <p>Cargá un tablero para ver las tareas</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Comment Modal ── -->
+<div class="overlay" id="commentOverlay" onclick="closeModal(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="modalTitle">Agregar comentario</h2>
+        <div class="task-ref" id="modalTaskRef"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()" aria-label="Cerrar">×</button>
+    </div>
+
+    <div class="field">
+      <label for="commentText">Comentario</label>
+      <textarea id="commentText" placeholder="Escribí tu comentario..." rows="4"></textarea>
+    </div>
+
+    <label class="toggle-row">
+      <input type="checkbox" id="notifyAll" />
+      Notificar a todos los miembros de la tarea
+    </label>
+
+    <div id="commentAlert" class="hidden"></div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="submitComment()" id="btnSubmit">Enviar comentario</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Constantes ─────────────────────────────────────────────────────────
+  const API_BASE = 'https://jq5o7ema2d.execute-api.us-east-1.amazonaws.com';
+  const LIST_ID  = '901713225426';
+
+  // ── State ──────────────────────────────────────────────────────────────
+  let state = {
+    tasks:      [],
+    activeTask: null,   // { id, name }
+  };
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+
+  function token()    { return ($('apiToken').value || '').trim(); }
+
+  function headers() {
+    return { 'Content-Type': 'application/json', 'X-ClickUp-Token': token() };
+  }
+
+  function showAlert(containerId, type, msg) {
+    const el = $(containerId);
+    el.className = `alert alert-${type}`;
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+  function hideAlert(containerId) { $(containerId).classList.add('hidden'); }
+
+  function setLoading(btnId, loading, label = '') {
+    const btn = $(btnId);
+    if (loading) {
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner"></span>${label}`;
+    } else {
+      btn.disabled = false;
+    }
+  }
+
+  function updateTokenBadge() {
+    const t = token();
+    const dot    = $('tokenDot');
+    const status = $('tokenStatus');
+    if (t) {
+      dot.className = 'dot ok';
+      status.textContent = t.slice(0, 6) + '••••••••';
+    } else {
+      dot.className = 'dot';
+      status.textContent = 'Sin token';
+    }
+  }
+
+  $('apiToken').addEventListener('input', updateTokenBadge);
+
+  // Status color mapping
+  function statusBadge(status) {
+    const s = (status || '').toLowerCase();
+    let bg = '#3a3f5c', color = '#a0a4c0';
+    if (['complete','completadas','done','closed'].includes(s))  { bg='rgba(62,207,142,.15)'; color='#3ecf8e'; }
+    if (['in progress','en curso','in_progress'].includes(s))    { bg='rgba(124,92,252,.15)'; color='#9b7ffe'; }
+    if (['to do','pendiente','open'].includes(s))                { bg='rgba(123,127,158,.15)'; color='#7b7f9e'; }
+    if (['at risk','update required'].includes(s))               { bg='rgba(245,166,35,.15)'; color='#f5a623'; }
+    if (['on hold','cancelled','canceled'].includes(s))          { bg='rgba(224,92,92,.15)'; color='#e05c5c'; }
+    return `<span class="badge" style="background:${bg};color:${color}">${status || '—'}</span>`;
+  }
+
+  function priorityLabel(p) {
+    if (!p) return '<span style="color:var(--muted)">—</span>';
+    const map = { urgent:'#e05c5c', high:'#f5a623', normal:'#7c5cfc', low:'#3ecf8e' };
+    const c = map[(p||'').toLowerCase()] || 'var(--muted)';
+    return `<span style="color:${c};font-weight:600">${p}</span>`;
+  }
+
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Load board ─────────────────────────────────────────────────────────
+  async function loadBoard() {
+    hideAlert('configAlert');
+    if (!token()) { showAlert('configAlert','error','Ingresá tu API Key de ClickUp.'); return; }
+
+    setLoading('btnLoad', true, ' Cargando…');
+    $('boardInfo').classList.add('hidden');
+    $('tasksCard').classList.add('hidden');
+
+    try {
+      const res = await fetch(`${API_BASE}/board/${LIST_ID}`, { headers: headers() });
+      const data = await res.json();
+      if (!res.ok) { showAlert('configAlert','error', data.detail || `Error ${res.status}`); return; }
+
+      state.tasks = data.tasks || [];
+
+      renderBoardInfo(data.list);
+      renderTasks(state.tasks);
+
+      $('boardInfo').classList.remove('hidden');
+      $('tasksCard').classList.remove('hidden');
+
+      // Carga comentarios en background y actualiza cada fila al llegar
+      loadCommentsInBackground(state.tasks);
+    } catch(e) {
+      showAlert('configAlert','error', `No se pudo conectar con la API: ${e.message}`);
+    } finally {
+      $('btnLoad').disabled = false;
+      $('btnLoad').innerHTML = '<span>Cargar tablero</span>';
+    }
+  }
+
+  function renderBoardInfo(list) {
+    if (!list) return;
+    const statuses = (list.statuses || [])
+      .map(s => `<span class="badge" style="background:${s.color}22;color:${s.color}">${escHtml(s.status)}</span>`)
+      .join(' ');
+    $('boardInfoContent').innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+        <div>
+          <div style="font-size:20px;font-weight:700;margin-bottom:4px">${escHtml(list.name)}</div>
+          <div style="color:var(--muted);font-size:13px">ID: ${escHtml(list.id)}</div>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">ESTADOS</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${statuses || '<span style="color:var(--muted)">—</span>'}</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">TAREAS</div>
+          <div style="font-size:22px;font-weight:700">${list.task_count ?? state.tasks.length}</div>
+        </div>
+      </div>`;
+  }
+
+  function renderTasks(tasks) {
+    $('taskCount').textContent = tasks.length;
+    if (!tasks.length) {
+      $('tableWrap').innerHTML = `
+        <div class="empty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/>
+          </svg>
+          <p>No se encontraron tareas en este tablero</p>
+        </div>`;
+      return;
+    }
+
+    const rows = tasks.map(t => {
+      const assignees = (t.assignees || []).map(a => escHtml(a.username || a.email || '')).join(', ') || '—';
+      const taskUrl   = t.url ? `href="${escHtml(t.url)}" target="_blank" rel="noopener"` : '';
+
+      const tagPills = (t.tags || []).map(tag => {
+        const bg    = tag.tag_bg    || tag.color || '#3a3f5c';
+        const color = tag.tag_fg    || '#e2e4f0';
+        return `<span class="tag-pill" style="background:${escHtml(bg)}22;color:${escHtml(color)};border:1px solid ${escHtml(bg)}55">${escHtml(tag.name)}</span>`;
+      }).join('') || '<span style="color:var(--muted)">—</span>';
+
+      return `
+        <tr data-task-id="${escHtml(t.id)}">
+          <td class="task-name"><a ${taskUrl}>${escHtml(t.name)}</a></td>
+          <td>${statusBadge(t.status?.status)}</td>
+          <td style="color:var(--muted)">${escHtml(assignees)}</td>
+          <td style="max-width:160px">${tagPills}</td>
+          <td class="last-comment-cell" style="font-size:13px;max-width:280px;color:var(--muted)">
+            <span class="spinner" style="width:12px;height:12px;border-width:1.5px"></span>
+          </td>
+          <td>
+            <button class="btn-ghost btn-sm" onclick="openModal('${escHtml(t.id)}', '${escHtml(t.name.replace(/'/g,"\\'"))}')">
+              + Comentar
+            </button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    $('tableWrap').innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Tarea</th><th>Estado</th><th>Asignados</th><th>Tags</th><th>Último comentario</th><th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // Carga comentarios de cada tarea en paralelo y actualiza la celda al llegar
+  async function loadCommentsInBackground(tasks) {
+    await Promise.all(tasks.map(async t => {
+      try {
+        const res  = await fetch(`${API_BASE}/board/${LIST_ID}/tasks/${t.id}/comments`, { headers: headers() });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const comments = data.comments || [];
+        const cell = document.querySelector(`tr[data-task-id="${t.id}"] .last-comment-cell`);
+        if (!cell) return;
+
+        if (!comments.length) {
+          cell.innerHTML = '<span style="color:var(--muted)">—</span>';
+          return;
+        }
+
+        const c        = comments[comments.length - 1];
+        const user     = escHtml((c.user || {}).username || '?');
+        const fullText = (
+          (c.comment_text || '').trim() ||
+          (c.comment || []).map(b => (b && b.text) || '').join(' ').trim()
+        );
+
+        if (!fullText) {
+          cell.innerHTML = '<span style="color:var(--muted)">—</span>';
+          return;
+        }
+
+        const oneLiner  = escHtml(fullText.replace(/\n/g, ' '));
+        const fullEsc   = escHtml(fullText);
+        cell.innerHTML  = `
+          <div class="tooltip-wrap">
+            <div class="truncated">
+              <span style="color:var(--muted);font-size:12px">${user}:</span> ${oneLiner}
+            </div>
+            <div class="tooltip-box"><strong>${user}</strong>\n${fullEsc}</div>
+          </div>`;
+      } catch(_) {
+        const cell = document.querySelector(`tr[data-task-id="${t.id}"] .last-comment-cell`);
+        if (cell) cell.innerHTML = '<span style="color:var(--muted)">—</span>';
+      }
+    }));
+  }
+
+  // ── CSV download ────────────────────────────────────────────────────────
+  async function downloadCsv() {
+    if (!state.tasks.length) return;
+    hideAlert('tasksAlert');
+    setLoading('btnCsv', true, ' Generando…');
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/board/${LIST_ID}/export/csv`,
+        { headers: headers() }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showAlert('tasksAlert','error', err.detail || `Error ${res.status} al generar el CSV`);
+        return;
+      }
+
+      // La Lambda devuelve el CSV como base64 (isBase64Encoded: true).
+      // API Gateway HTTP API lo decodifica automáticamente antes de enviarlo al browser,
+      // así que simplemente descargamos el blob.
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const ts   = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+      a.href     = url;
+      a.download = `clickup_${state.listId}_${ts}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      showAlert('tasksAlert','success','CSV descargado correctamente.');
+    } catch(e) {
+      showAlert('tasksAlert','error', `Error de red: ${e.message}`);
+    } finally {
+      $('btnCsv').disabled = false;
+      $('btnCsv').innerHTML = '↓ Descargar CSV';
+    }
+  }
+
+  // ── Comment modal ───────────────────────────────────────────────────────
+  function openModal(taskId, taskName) {
+    state.activeTask = { id: taskId, name: taskName };
+    $('modalTaskRef').textContent = taskName;
+    $('commentText').value = '';
+    $('notifyAll').checked = false;
+    hideAlert('commentAlert');
+    $('commentOverlay').classList.add('open');
+    setTimeout(() => $('commentText').focus(), 50);
+  }
+
+  function closeModal(e) {
+    if (e && e.target !== $('commentOverlay')) return;
+    $('commentOverlay').classList.remove('open');
+    state.activeTask = null;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') $('commentOverlay').classList.remove('open');
+  });
+
+  async function submitComment() {
+    hideAlert('commentAlert');
+    const text = $('commentText').value.trim();
+    if (!text) { showAlert('commentAlert','error','El comentario no puede estar vacío.'); return; }
+    if (!state.activeTask) return;
+
+    setLoading('btnSubmit', true, ' Enviando…');
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/board/${LIST_ID}/tasks/${state.activeTask.id}/comments`,
+        {
+          method:  'POST',
+          headers: headers(),
+          body:    JSON.stringify({ comment_text: text, notify_all: $('notifyAll').checked }),
+        }
+      );
+
+      if (res.status === 201 || res.ok) {
+        showAlert('commentAlert','success','Comentario publicado correctamente.');
+        $('commentText').value = '';
+        setTimeout(() => $('commentOverlay').classList.remove('open'), 1200);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showAlert('commentAlert','error', err.detail || `Error ${res.status}`);
+      }
+    } catch(e) {
+      showAlert('commentAlert','error', `Error de red: ${e.message}`);
+    } finally {
+      $('btnSubmit').disabled = false;
+      $('btnSubmit').innerHTML = 'Enviar comentario';
+    }
+  }
+</script>
+</body>
+</html>
