@@ -311,7 +311,7 @@ Interfaz web estática (Guri Data Team Board Manager) que permite a los usuarios
 - Ingresar su API Key de ClickUp y cargar el tablero configurado (el formulario se oculta al cargar con éxito y reaparece ante errores)
 - Recargar el tablero en cualquier momento con el botón **↺ Recargar** sin necesidad de reingresar el token
 - Ver todas las tareas con sus estados, asignados, tags y último comentario
-- Filtrar tareas por estado, asignado, tag y actividad del día desde un sidebar lateral
+- Filtrar tareas por estado, asignado, tag y actividad reciente (últimas 24 horas) desde un sidebar lateral
 - Ordenar la tabla por cualquier columna (nombre, estado, asignados, tags, fecha de comentario)
 - Ver el texto completo de un comentario en un popover flotante al hacer click
 - Agregar comentarios a tareas individuales
@@ -392,7 +392,7 @@ Para que el browser pueda llamar a la API desde CloudFront, agregá CORS en API 
 2. Ingresá tu API Key de ClickUp (`pk_...`) o `testing12345678` para modo demo
 3. Hacé click en **Cargar tablero** — el formulario de configuración se oculta automáticamente al cargar con éxito y vuelve a mostrarse si ocurre un error
 4. Usá el botón **↺ Recargar** en el encabezado del tablero para refrescar los datos sin tener que reingresar el token
-5. Usá el sidebar izquierdo para filtrar por estado, asignado, tag o actividad del día
+5. Usá el sidebar izquierdo para filtrar por estado, asignado, tag o actividad reciente (últimas 24 horas)
 6. Hacé click en cualquier encabezado de columna para ordenar la tabla
 7. Hacé click en el texto de un comentario para ver el contenido completo en un popover
 8. Hacé click en **+ Comentar** para agregar un comentario a una tarea
